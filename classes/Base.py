@@ -71,6 +71,7 @@ class Base:
         """
         pygame.init()
         pygame.font.init()
+        pygame.mixer.init()
 
         # setting window name
         pygame.display.set_caption(self.window_name)

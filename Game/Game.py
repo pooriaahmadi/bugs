@@ -7,6 +7,7 @@ from Game.Bug import Bug
 from Game.Font import Font
 from Game.HealthBar import HealthBar
 from Game.Text import Text
+from Game.Sound import Sound
 from Game.Button import Button
 import os
 import random
@@ -49,9 +50,15 @@ class Game(Base):
     def a_second_passed(self):
         self.passed_seconds += 1
 
+        is_hit = False
         for bug in self.bugs:
             if self.computer.rect.colliderect(bug.rect):
+                is_hit = True
                 self.computer.damage(bug.damage)
+                
+        if is_hit:
+            self.sounds["hurt"].play(0)
+            
         if self.computer.health <= 0:
             self.is_game_over = True
             
@@ -109,6 +116,12 @@ class Game(Base):
     def initiate(self) -> None:
         super(Game, self).initiate()
         self.font = Font(os.path.join("fonts", "yoster.ttf"), 30)
+        
+        # Sounds
+        self.sounds = {
+            "shoot": Sound("sounds/hit.wav"),
+            "hurt": Sound("sounds/hurt.wav")
+        }
 
         # Mouse
         self.mouse_pointer = Circle(100, 100, 10)
@@ -222,6 +235,7 @@ class Game(Base):
                         if not collided_with_mouse and bug.rect.collidepoint(mouse_coords):
                             self.score += 1
                             self.score_text.message = f"Score: {self.score}"
+                            self.sounds["shoot"].play(0)
                             self.bugs.remove(bug)
                             break
 

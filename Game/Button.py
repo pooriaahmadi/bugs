@@ -9,6 +9,9 @@ class Button(Rectangle):
         super().__init__(x, y, width, height, color)
         
         self.text = text
+        self.hover_sound = pygame.mixer.Sound("sounds/hover.wav")
+        self.click_sound = pygame.mixer.Sound("sounds/click.wav")
+        self.is_in = False
         
     def center(self):
         super(Button, self).center()
@@ -22,8 +25,15 @@ class Button(Rectangle):
         
         if mouse_pointer and events:
             for event in events:
-                if event.type == pygame.MOUSEBUTTONUP and self.rect.collidepoint(mouse_pointer.x, mouse_pointer.y):
-                    self.click()
+                if self.rect.collidepoint(mouse_pointer.x, mouse_pointer.y):
+                    if not self.is_in:
+                        self.is_in = True
+                        self.hover_sound.play()
+                    if event.type == pygame.MOUSEBUTTONUP:
+                        self.click_sound.play()
+                        self.click()
+                else:
+                    self.is_in = False
         
         super(Button, self).draw(screen)
         self.text.draw(screen)
