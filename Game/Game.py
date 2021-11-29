@@ -1,7 +1,7 @@
 from classes.Base import Base
 from Game.Rectangle import Rectangle
 from Game.Computer import Computer
-from Game.Circle import Circle
+from Game.Mouse import Mouse
 from Game.Image import Image
 from Game.Bug import Bug
 from Game.Font import Font
@@ -25,9 +25,16 @@ class Game(Base):
         self.running = False
         self.passed_seconds = 0
         self.bugs = []
-        self.is_game_over = False
-        self.is_main_menu = True
         self.score = 0
+        self.__is_game_over = False
+        self.is_main_menu = True
+        self.color = [255,255,255]
+        self.current_color = self.color
+        self.next_color = [random.randint(100,255),random.randint(100,255),random.randint(100,255)]
+        self.change_background_time = 3
+        self.__number_of_steps = 1
+        self.step = 1
+        self.steps = 1
 
     # running value
     @property
@@ -72,21 +79,34 @@ class Game(Base):
         else:
             self.make_bug()
 
+    @property
+    def is_game_over(self) -> bool:
+        return self.__is_game_over
+    
+    @is_game_over.setter
+    def is_game_over(self, value: bool):
+        self.__is_game_over = value
+        if value:
+            self.bugs = []
+            self.computer.health = 100
+            self.score_game_over_text.message = f"Score: {self.score}"
+            
     def game_over(self):
         """
         Game over statement
         """
-        self.screen.fill([255, 255, 255])
+        self.screen.fill(self.current_color)
 
         self.game_over_text.draw(self.screen)
         self.button.draw(self.screen, self.mouse_pointer, self.events)
+        self.score_game_over_text.draw(self.screen)
 
         self.tick()
 
     def main_menu(self):
         """Main Menu"""
 
-        self.screen.fill([255, 255, 255])
+        self.screen.fill(self.current_color)
 
         self.bugs_text.draw(self.screen)
         self.start_button.draw(self.screen, self.mouse_pointer, self.events)
@@ -120,15 +140,17 @@ class Game(Base):
         # Sounds
         self.sounds = {
             "shoot": Sound("sounds/hit.wav"),
-            "hurt": Sound("sounds/hurt.wav")
+            "hurt": Sound("sounds/hurt.wav"),
+            "main_menu": Sound("musics/menu.mp3"),
+            "game": Sound("musics/game.mp3")
         }
 
         # Mouse
-        self.mouse_pointer = Circle(100, 100, 10)
+        self.mouse_pointer = Mouse(0,0, 30, 30, 7)
 
         # Health bar
         self.health_bar = HealthBar(
-            self.font, 0, 20, 200, 50, text_color=[255, 255, 255])
+            self.font, 0, 20, 200, 50, text_color=self.current_color)
         self.health_bar.x = self.size[0] / 2 - self.health_bar.width / 2
         self.health_bar.calculate_text()
 
@@ -145,7 +167,7 @@ class Game(Base):
         self.game_over_text = Text(
             "Game over", self.size[0] / 2, self.size[1] / 2, self.font, center=True)
         self.game_over_text.x -= 20
-        self.game_over_text.y -= 100
+        self.game_over_text.y -= 200
 
         # "Bugs" text
 
@@ -165,7 +187,7 @@ class Game(Base):
         font.size = 40
 
         # "Start" text
-        self.start_text = Text("Start", 0, 0, font, [255, 255, 255])
+        self.start_text = Text("Start", 0, 0, font, self.current_color)
 
         # Start Button
         self.start_button = Button(
@@ -174,11 +196,13 @@ class Game(Base):
         self.start_button.text.x -= 15
 
         # "Restart" text
-        self.restart_text = Text("Restart", 0, 0, font, [255, 255, 255])
+        self.restart_text = Text("Restart", 0, 0, font, self.current_color)
 
+        # "Score" Game over text
+        self.score_game_over_text = Text("Score: ", self.size[0] / 2, self.size[1] / 2, font, center=True)
         # Restart button
         self.button = Button(
-            self.restart_text, self.size[0] / 2, self.size[1] / 2 + 100, 300, 80, [0, 0, 255])
+            self.restart_text, self.size[0] / 2, self.size[1] / 2 + 150, 300, 80, [0, 0, 255])
         self.button.center()
         self.button.text.x -= 15
         
@@ -194,6 +218,7 @@ class Game(Base):
 
         self.start_button.click = start_click
         self.button.click = restart_click
+        
 
     def reset(self):
         """Resets the game"""
@@ -205,14 +230,37 @@ class Game(Base):
         self.score_text.message = f"Score: {self.score}"
         self.computer.reset()
         self.bugs = []
+        self.sounds["main_menu"].stop()
+        self.sounds["game"].stop()
+        self.sounds["game"].play(-1)
 
+    @property
+    def number_of_steps(self):
+        return self.__number_of_steps
+    
+    @number_of_steps.setter
+    def number_of_steps(self, value):
+        self.__number_of_steps = (self.number_of_steps * self.steps + value) / (self.steps + 1)
+        self.steps += 1
+
+    def color_transition(self):
+        self.number_of_steps = self.change_background_time * self.fps
+        self.step += 1
+        if self.step < self.number_of_steps:
+            self.current_color = [x + (((y-x)/self.number_of_steps)*self.step) for x, y in zip(pygame.color.Color(self.color[0], self.color[1], self.color[2]), pygame.color.Color(self.next_color[0], self.next_color[1], self.next_color[2]))]
+        else:
+            self.step = 1
+            self.color = self.next_color
+            self.next_color = [random.randint(100, 255),random.randint(100, 255),random.randint(100, 255)]
+            
     def run(self):
         """
         Game loop function
         """
+        self.sounds["main_menu"].play(-1)
         self.running = True
         while self.running:
-
+            self.color_transition()
             mouse_coords = pygame.mouse.get_pos()
             self.mouse_pointer.x = mouse_coords[0]
             self.mouse_pointer.y = mouse_coords[1]
@@ -233,7 +281,7 @@ class Game(Base):
                     for bug in self.bugs:
                         # Collide with mouse
                         if not collided_with_mouse and bug.rect.collidepoint(mouse_coords):
-                            self.score += 1
+                            self.score += bug.damage
                             self.score_text.message = f"Score: {self.score}"
                             self.sounds["shoot"].play(0)
                             self.bugs.remove(bug)
@@ -248,8 +296,8 @@ class Game(Base):
                 self.main_menu()
                 continue
 
-            # white screen
-            self.screen.fill([255, 255, 255])
+            # screen
+            self.screen.fill(self.current_color)
 
             for bug in self.bugs:
 
@@ -267,5 +315,6 @@ class Game(Base):
             self.score_text.draw(self.screen)
 
             self.mouse_pointer.draw(self.screen)
+            
             # frame rate tick
             self.tick()
