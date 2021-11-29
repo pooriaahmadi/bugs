@@ -54,7 +54,16 @@ class Game(Base):
                 self.computer.damage(bug.damage)
         if self.computer.health <= 0:
             self.is_game_over = True
-        self.make_bug()
+            
+        # making game harder by the time
+        if self.passed_seconds > 180:
+            for i in range(4):
+                self.make_bug()
+        elif self.passed_seconds > 90:
+            for i in range(2):
+                self.make_bug()
+        else:
+            self.make_bug()
 
     def game_over(self):
         """
@@ -89,10 +98,12 @@ class Game(Base):
         y = random.choice(
             [[0, self.computer.y], [self.computer.y+self.computer.height, self.size[1]]])
         y = random.randint(*y)
-
-        bug = Bug(x, y, random.randrange(1, 5), random.randrange(
-            20, 40), random.randrange(20, 40), random.randrange(1, 10)/10, random.randint(30, 50))
+        
+        obstacles = random.randint(1, 5)
+        bug = Bug(x, y, obstacles, random.randrange(
+            20, 40), random.randrange(20, 40), 6 - obstacles, random.randint(30, 50))
         self.bugs.append(bug)
+        
         return bug
 
     def initiate(self) -> None:
@@ -166,7 +177,7 @@ class Game(Base):
             self.reset()
             
         def start_click():
-            self.is_main_menu = False
+            self.reset()
 
         self.start_button.click = start_click
         self.button.click = restart_click
@@ -174,6 +185,7 @@ class Game(Base):
     def reset(self):
         """Resets the game"""
         self.is_game_over = False
+        self.is_main_menu = False
         self.running = True
         self.passed_seconds = 0
         self.score = 0
