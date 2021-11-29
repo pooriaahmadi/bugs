@@ -29,7 +29,10 @@ class Computer(Object):
 
     @health.setter
     def health(self, value: int):
-        self.__health = value
+        if value > 100:
+            self.__health = 100
+        else:
+            self.__health = value
 
     # Image property
     @property

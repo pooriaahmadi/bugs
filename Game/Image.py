@@ -10,7 +10,6 @@ class Image(Object):
         self.name = name
         self.image = image.convert_alpha()
         if self.width and self.height:
-            print("yay")
             self.image = pygame.transform.scale(self.image, (self.width, self.height))
 
     # Name property

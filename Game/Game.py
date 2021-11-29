@@ -9,6 +9,7 @@ from Game.HealthBar import HealthBar
 from Game.Text import Text
 from Game.Sound import Sound
 from Game.Button import Button
+from Game.Heal import Heal
 import os
 import random
 import pygame
@@ -35,6 +36,7 @@ class Game(Base):
         self.__number_of_steps = 1
         self.step = 1
         self.steps = 1
+        self.heals = []
 
     # running value
     @property
@@ -57,6 +59,10 @@ class Game(Base):
     def a_second_passed(self):
         self.passed_seconds += 1
 
+        for heal in self.heals:
+            if heal.created_at + heal.active_time < self.passed_seconds:
+                self.heals.remove(heal)
+
         is_hit = False
         for bug in self.bugs:
             if self.computer.rect.colliderect(bug.rect):
@@ -78,7 +84,21 @@ class Game(Base):
                 self.make_bug()
         else:
             self.make_bug()
+        
+        if random.randint(1, 10) == 1:
+            self.make_heal()
+            
+    def make_heal(self):
+        x = random.choice(
+            [[0, self.computer.x], [self.computer.x+self.computer.width, self.size[0]]])
+        x = random.randint(*x)
 
+        y = random.choice(
+            [[0, self.computer.y], [self.computer.y+self.computer.height, self.size[1]]])
+        y = random.randint(*y)
+        
+        self.heals.append(Heal(self.heart_image,self.passed_seconds, random.randint(4, 8), random.randint(3, 5), x, y, self.heart_image.width, self.heart_image.height))
+    
     @property
     def is_game_over(self) -> bool:
         return self.__is_game_over
@@ -88,6 +108,7 @@ class Game(Base):
         self.__is_game_over = value
         if value:
             self.bugs = []
+            self.heals = []
             self.computer.health = 100
             self.score_game_over_text.message = f"Score: {self.score}"
             
@@ -142,9 +163,11 @@ class Game(Base):
             "shoot": Sound("sounds/hit.wav"),
             "hurt": Sound("sounds/hurt.wav"),
             "main_menu": Sound("musics/menu.mp3"),
-            "game": Sound("musics/game.mp3")
+            "game": Sound("musics/game.mp3"),
+            "coin": Sound("sounds/coin.wav")
         }
-
+        # Heal image
+        self.heart_image = Image.load("artworks/heart.png", "heart", 40, 35)
         # Mouse
         self.mouse_pointer = Mouse(0,0, 30, 30, 7)
 
@@ -230,6 +253,7 @@ class Game(Base):
         self.score_text.message = f"Score: {self.score}"
         self.computer.reset()
         self.bugs = []
+        self.heals = []
         self.sounds["main_menu"].stop()
         self.sounds["game"].stop()
         self.sounds["game"].play(-1)
@@ -286,6 +310,12 @@ class Game(Base):
                             self.sounds["shoot"].play(0)
                             self.bugs.remove(bug)
                             break
+                    for heal in self.heals:
+                        if heal.rect.collidepoint(mouse_coords):
+                            self.computer.health += heal.heal_amount
+                            self.heals.remove(heal)
+                            self.sounds["coin"].play(0)
+                            break
 
             # if it is game over, then do game over statement
             if self.is_game_over:
@@ -307,13 +337,15 @@ class Game(Base):
                     self.mouse_pointer.color = [0, 255, 0]
 
                 bug.draw(self.screen)
+                
+            for heal in self.heals:
+                heal.draw(self.screen)
 
             self.health_bar.fill_percentage = self.computer.health
 
             self.computer.draw(self.screen)
             self.health_bar.draw(self.screen)
             self.score_text.draw(self.screen)
-
             self.mouse_pointer.draw(self.screen)
             
             # frame rate tick
